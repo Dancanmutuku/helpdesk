@@ -8,7 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default=".onrender.com,localhost,127.0.0.1"
+).split(",")
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -58,8 +61,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
         conn_max_age=600,
         ssl_require=True,
     )
