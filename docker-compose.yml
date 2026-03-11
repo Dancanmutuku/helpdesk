@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - ENV=dev
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=helpdesk_user
+      - POSTGRES_PASSWORD=helpdesk_pass
+      - POSTGRES_DB=helpdesk_db
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: helpdesk_user
+      POSTGRES_PASSWORD: helpdesk_pass
+      POSTGRES_DB: helpdesk_db
+    ports:
+      - "5432:5432"
