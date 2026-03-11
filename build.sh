@@ -4,16 +4,14 @@ set -o errexit
 pip install -r requirements.txt
 python manage.py collectstatic --no-input
 python manage.py migrate
-
-chmod +x build.sh
 ```
 
-### `Procfile` — tells Render how to run the app
+**`Procfile`** — a separate file called exactly `Procfile` (no extension):
 ```
 web: gunicorn config.wsgi:application
 ```
 
-### Update `requirements.txt` — add production dependencies
+**`requirements.txt`** — a separate file:
 ```
 Django>=4.2,<5.0
 psycopg2-binary>=2.9.9
