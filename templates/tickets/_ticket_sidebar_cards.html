@@ -1,0 +1,252 @@
+
+
+<!-- ① Ticket Details Card -->
+<div class="card mb-3">
+  <div class="card-header">
+    <h6><i class="bi bi-info-circle text-teal me-1"></i>Ticket Details</h6>
+  </div>
+  <div class="card-body p-2">
+
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">Status</div>
+      <span class="badge badge-{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+    </div>
+
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">Priority</div>
+      <span class="d-flex align-items-center gap-2">
+        <span class="priority-dot dot-{{ ticket.priority }}"></span>
+        <span class="badge badge-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+      </span>
+    </div>
+
+    {% if ticket.category %}
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">Category</div>
+      <span class="text-sm"><i class="bi bi-tag text-muted me-1"></i>{{ ticket.category.name }}</span>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">Source</div>
+      <span class="text-sm text-muted">
+        {% if ticket.source == 'web' %}<i class="bi bi-globe2"></i>
+        {% elif ticket.source == 'email' %}<i class="bi bi-envelope"></i>
+        {% else %}<i class="bi bi-chat-dots"></i>{% endif %}
+        {{ ticket.get_source_display }}
+      </span>
+    </div>
+
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">Assigned To</div>
+      {% if ticket.assigned_to %}
+      <span class="d-flex align-items-center gap-2">
+        <span class="avatar avatar-sm avatar-teal">{{ ticket.assigned_to.get_initials }}</span>
+        <span class="text-sm">{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.username }}</span>
+      </span>
+      {% else %}
+      <span class="text-sm text-muted fst-italic">Unassigned</span>
+      {% endif %}
+    </div>
+
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">SLA Deadline</div>
+      {% if ticket.sla_due_at %}
+        {% if ticket.is_overdue %}
+        <span class="sla-overdue"><i class="bi bi-alarm-fill"></i> OVERDUE</span>
+        {% else %}
+        <span class="sla-ok text-sm" data-sla-due="{{ ticket.sla_due_at|date:'c' }}"></span>
+        {% endif %}
+      {% else %}
+        <span class="text-muted">—</span>
+      {% endif %}
+    </div>
+
+    {% if ticket.first_response_at %}
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">First Response</div>
+      <span class="text-sm text-muted">{{ ticket.first_response_at|date:"M d, Y H:i" }}</span>
+    </div>
+    {% endif %}
+
+    {% if ticket.resolved_at %}
+    <div class="sidebar-detail-row">
+      <div class="sidebar-detail-label">Resolved At</div>
+      <span class="text-sm text-success">{{ ticket.resolved_at|date:"M d, Y H:i" }}</span>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-detail-row border-bottom-0">
+      <div class="sidebar-detail-label">Created</div>
+      <span class="text-sm text-muted">{{ ticket.created_at|date:"M d, Y H:i" }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ② Update Ticket Card (agents/managers only) -->
+{% if update_form %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h6><i class="bi bi-pencil-square text-teal me-1"></i>Update Ticket</h6>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update">
+
+      <!-- Status Field -->
+      <div class="form-group mb-2">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          {% for val, label in update_form.fields.status.choices %}
+          <option value="{{ val }}" {% if ticket.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Priority Field -->
+      <div class="form-group mb-2">
+        <label class="form-label">Priority</label>
+        <select name="priority" class="form-select">
+          {% for val, label in update_form.fields.priority.choices %}
+          <option value="{{ val }}" {% if ticket.priority == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Assigned To Field -->
+      <div class="form-group mb-2">
+        <label class="form-label">Assign To</label>
+        <select name="assigned_to" class="form-select">
+          <option value="">— Unassigned —</option>
+          {% for agent in update_form.fields.assigned_to.queryset %}
+          <option value="{{ agent.pk }}" {% if ticket.assigned_to == agent %}selected{% endif %}>
+            {{ agent.get_full_name|default:agent.username }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Category Field -->
+      <div class="form-group mb-2">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-select">
+          <option value="">— No Category —</option>
+          {% for cat in update_form.fields.category.queryset %}
+          <option value="{{ cat.pk }}" {% if ticket.category == cat %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-navy w-100 mt-2">
+        <i class="bi bi-check-lg"></i> Save Changes
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<!-- ③ Submitter Info Card (agents/managers only) -->
+{% if user.is_agent %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h6><i class="bi bi-person text-teal me-1"></i>Submitted By</h6>
+  </div>
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="avatar avatar-lg">{{ ticket.submitted_by.get_initials }}</div>
+      <div class="min-w-0">
+        <div class="fw-semibold text-sm">{{ ticket.submitted_by.get_full_name|default:ticket.submitted_by.username }}</div>
+        <div class="text-xs text-muted">{{ ticket.submitted_by.email }}</div>
+        {% if ticket.submitted_by.department %}
+        <div class="text-xs text-muted"><i class="bi bi-building me-1"></i>{{ ticket.submitted_by.department.name }}</div>
+        {% endif %}
+        {% if ticket.submitted_by.phone %}
+        <div class="text-xs text-muted"><i class="bi bi-telephone me-1"></i>{{ ticket.submitted_by.phone }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex flex-column gap-1 mb-2">
+      <a href="mailto:{{ ticket.submitted_by.email }}" class="btn btn-outline btn-sm w-100 text-center">
+        <i class="bi bi-envelope"></i> Send Email
+      </a>
+      {% if ticket.submitted_by.phone %}
+      <a href="tel:{{ ticket.submitted_by.phone }}" class="btn btn-outline btn-sm w-100 text-center">
+        <i class="bi bi-telephone"></i> Call
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="text-xs text-muted text-center mt-3 pt-2 border-top">
+      <i class="bi bi-ticket-perforated me-1"></i>
+      {{ ticket.submitted_by.submitted_tickets.count }} total ticket{{ ticket.submitted_by.submitted_tickets.count|pluralize }}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ④ CSAT Feedback Card -->
+{% if ticket.status in 'resolved,closed' and not ticket.csat_score and user == ticket.submitted_by %}
+<div class="card mb-3 border-warning bg-lightyellow">
+  <div class="card-header bg-lightyellow border-warning">
+    <h6 class="text-warning m-0"><i class="bi bi-star-half me-1"></i>Rate Your Experience</h6>
+  </div>
+  <div class="card-body text-center">
+    <p class="text-sm text-muted mb-2">Your ticket is resolved! How did we do?</p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="csat">
+      <input type="hidden" name="csat_score" id="csat_score_sidebar">
+
+      <div class="d-flex justify-content-center gap-1 mb-2">
+        {% for i in "12345" %}
+        <button type="button" class="csat-star-sidebar" data-val="{{ i }}" title="{{ i }} star">{{ i|add:'⭐' }}</button>
+        {% endfor %}
+      </div>
+
+      <textarea name="csat_comment" class="form-control text-sm mb-2" rows="2" placeholder="Optional feedback..."></textarea>
+      <button type="submit" class="btn btn-primary btn-sm w-100">Submit Feedback</button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+  const stars = document.querySelectorAll('.csat-star-sidebar');
+  const input = document.getElementById('csat_score_sidebar');
+  stars.forEach((star, idx) => {
+    star.addEventListener('click', () => {
+      const val = parseInt(star.dataset.val);
+      if(input) input.value = val;
+      stars.forEach((s, i) => {
+        const active = i < val;
+        s.style.background = active ? '#fef3c7' : 'white';
+        s.style.borderColor = active ? '#fde047' : 'var(--border)';
+        s.style.transform = active ? 'scale(1.1)' : 'scale(1)';
+      });
+    });
+    star.addEventListener('mouseenter', () => stars.forEach((s,i)=>s.style.opacity=i<parseInt(star.dataset.val)?'1':'0.5'));
+    star.addEventListener('mouseleave',()=>stars.forEach(s=>s.style.opacity='1'));
+  });
+})();
+</script>
+{% endif %}
+
+<!-- ⑤ CSAT Result Card -->
+{% if ticket.csat_score %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h6><i class="bi bi-star-fill text-yellow me-1"></i>CSAT Rating</h6>
+  </div>
+  <div class="card-body text-center p-3">
+    <div class="fs-2 mb-1">
+      {% for i in "12345" %}{% if forloop.counter <= ticket.csat_score %}⭐{% endif %}{% endfor %}
+    </div>
+    <div class="fs-4 fw-bold text-navy">{{ ticket.csat_score }} / 5</div>
+    {% if ticket.csat_comment %}
+    <p class="text-sm text-muted fst-italic mt-2">"{{ ticket.csat_comment }}"</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

@@ -1,0 +1,72 @@
+{% extends "base/base.html" %}
+{% block title %}{{ article.title }}{% endblock %}
+{% block page_title %}Knowledge Base{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;">
+  <ul class="breadcrumb">
+    <li><a href="{% url 'knowledge:home' %}">Knowledge Base</a></li>
+    <li>{{ article.category.name }}</li>
+    <li>{{ article.title|truncatechars:40 }}</li>
+  </ul>
+
+  <div class="card mb-5">
+    <div class="card-header" style="padding:20px 24px;">
+      <div>
+        <div style="font-size:12px;color:var(--teal);font-weight:600;margin-bottom:6px;">{{ article.category.name|upper }}</div>
+        <h2 style="margin:0;font-size:22px;">{{ article.title }}</h2>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+          By {{ article.author.get_full_name|default:article.author.username }} ·
+          Updated {{ article.updated_at|date:"M d, Y" }} ·
+          {{ article.views }} views
+          {% if article.helpfulness_score %} · {{ article.helpfulness_score }}% helpful{% endif %}
+        </div>
+      </div>
+      {% if user.is_manager %}
+      <a href="{% url 'knowledge:article_edit' article.slug %}" class="btn btn-outline btn-sm">
+        <i class="bi bi-pencil"></i> Edit
+      </a>
+      {% endif %}
+    </div>
+    <div class="card-body" style="padding:28px 24px;">
+      {% if article.summary %}
+      <div style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:12px 16px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;margin-bottom:20px;font-size:14px;color:var(--navy);">
+        {{ article.summary }}
+      </div>
+      {% endif %}
+      <div style="line-height:1.8;white-space:pre-wrap;">{{ article.content }}</div>
+    </div>
+    <div class="card-footer">
+      <div style="text-align:center;">
+        <p style="font-size:14px;font-weight:500;margin-bottom:12px;">Was this article helpful?</p>
+        <form method="post" style="display:inline-flex;gap:10px;">
+          {% csrf_token %}
+          <button type="submit" name="helpful" value="yes" class="btn btn-outline">
+            <i class="bi bi-hand-thumbs-up"></i> Yes ({{ article.helpful_yes }})
+          </button>
+          <button type="submit" name="helpful" value="no" class="btn btn-outline">
+            <i class="bi bi-hand-thumbs-down"></i> No ({{ article.helpful_no }})
+          </button>
+        </form>
+        <div style="margin-top:12px;">
+          <a href="{% url 'tickets:submit' %}" style="font-size:13px;color:var(--text-muted);">
+            Still need help? Submit a support ticket →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if related %}
+  <h6 style="margin-bottom:12px;">Related Articles</h6>
+  <div class="grid-3">
+    {% for art in related %}
+    <a href="{{ art.get_absolute_url }}" class="card" style="padding:16px;color:var(--text);display:block;">
+      <div style="font-weight:600;font-size:13.5px;margin-bottom:4px;">{{ art.title }}</div>
+      <div style="font-size:12px;color:var(--text-muted);">{{ art.summary|truncatechars:80 }}</div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

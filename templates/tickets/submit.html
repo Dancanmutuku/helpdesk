@@ -1,0 +1,113 @@
+{% extends "base/base.html" %}
+{% block title %}Submit Ticket{% endblock %}
+{% block page_title %}Submit Support Ticket{% endblock %}
+
+{% block content %}
+<div class="mx-auto" style="max-width:720px;">
+
+  <!-- Breadcrumb -->
+  <ul class="breadcrumb">
+    <li><a href="{% url 'tickets:list' %}">Tickets</a></li>
+    <li>New Ticket</li>
+  </ul>
+
+  <!-- Tips -->
+  <div class="card mb-4 bg-light border-primary">
+    <div class="card-body d-flex align-items-center gap-3">
+      <i class="bi bi-lightbulb" style="font-size:22px; color:#3b82f6;"></i>
+      <div>
+        <strong>Before submitting:</strong>
+        <p class="mb-0 small text-muted">
+          Check the <a href="{% url 'knowledge:home' %}">Knowledge Base</a> for solutions. Include as much detail as possible.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <!-- Title -->
+        <div class="mb-3">
+          {{ form.title.label_tag }}
+          {{ form.title }}
+          {{ form.title.errors }}
+        </div>
+
+        <!-- Category & Priority -->
+        <div class="d-flex gap-3 mb-3">
+          <div class="flex-fill">
+            {{ form.category.label_tag }}
+            {{ form.category }}
+            {{ form.category.errors }}
+          </div>
+          <div class="flex-fill">
+            {{ form.priority.label_tag }}
+            {{ form.priority }}
+            {{ form.priority.errors }}
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+          {{ form.description.label_tag }}
+          {{ form.description }}
+          {{ form.description.errors }}
+        </div>
+
+        <!-- Attachments -->
+        <div class="mb-3">
+          <label class="form-label">Attachments</label>
+          <div id="drop-zone" class="border-dashed p-4 text-center rounded" style="cursor:pointer;" onclick="document.getElementById('id_attachments').click()">
+            <i class="bi bi-cloud-arrow-up" style="font-size:28px;"></i>
+            <div class="small fw-medium">Click to upload or drag & drop files</div>
+            {{ form.attachments }}
+            {{ form.attachments.errors }}
+          </div>
+          <div id="file-list" class="mt-2 small text-muted"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{% url 'tickets:list' %}" class="btn btn-outline">Cancel</a>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const input = document.getElementById('id_attachments');
+const fileList = document.getElementById('file-list');
+const dropZone = document.getElementById('drop-zone');
+
+// Update file list display
+function updateFileList() {
+  const files = Array.from(input.files);
+  fileList.innerHTML = files.map(f => `<span class="badge bg-light text-dark me-1 mb-1"><i class="bi bi-paperclip"></i> ${f.name}</span>`).join('');
+}
+input.addEventListener('change', updateFileList);
+
+// Drag & drop
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.style.borderColor = '#3b82f6';
+});
+dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#dee2e6');
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.style.borderColor = '#dee2e6';
+  const dt = new DataTransfer();
+  Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  updateFileList();
+});
+</script>
+{% endblock %}

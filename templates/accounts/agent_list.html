@@ -1,0 +1,60 @@
+{% extends "base/base.html" %}
+{% block title %}Manage Agents{% endblock %}
+{% block page_title %}Manage Agents{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'accounts:agent_create' %}" class="btn btn-primary btn-sm">
+  <i class="bi bi-person-plus"></i> Add Agent
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h5><i class="bi bi-people" style="color:var(--teal);margin-right:6px;"></i>IT Team ({{ agents.count }} members)</h5>
+  </div>
+  <div class="table-wrapper" style="border:none;border-radius:0 0 var(--radius) var(--radius);">
+    <table class="data-table">
+      <thead>
+        <tr><th>Agent</th><th>Role</th><th>Department</th><th>Contact</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for agent in agents %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar avatar-teal">{{ agent.get_initials }}</div>
+              <div>
+                <div style="font-weight:600;font-size:13.5px;">{{ agent.get_full_name|default:agent.username }}</div>
+                <div style="font-size:12px;color:var(--text-muted);">{{ agent.job_title }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge {% if agent.is_manager %}badge-critical{% else %}badge-in_progress{% endif %}">
+              {{ agent.get_role_display }}
+            </span>
+          </td>
+          <td style="font-size:13px;">{{ agent.department.name|default:"—" }}</td>
+          <td style="font-size:13px;">{{ agent.email }}</td>
+          <td>
+            {% if agent.is_active %}
+            <span class="badge badge-resolved">Active</span>
+            {% else %}
+            <span class="badge badge-closed">Inactive</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'accounts:agent_edit' agent.pk %}" class="btn btn-outline btn-sm">
+              <i class="bi bi-pencil"></i> Edit
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty-state" style="padding:30px;"><p>No agents yet.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

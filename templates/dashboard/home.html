@@ -1,0 +1,207 @@
+{% extends "base/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- KPI Row -->
+<div class="grid-4 mb-6">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#e0f2fe;color:#0369a1;">
+      <i class="bi bi-ticket-perforated"></i>
+    </div>
+    <div class="stat-value">{{ total_open }}</div>
+    <div class="stat-label">Open Tickets</div>
+    <div class="stat-sub">{{ unassigned_count }} unassigned</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#fef3c7;color:#92400e;">
+      <i class="bi bi-exclamation-triangle"></i>
+    </div>
+    <div class="stat-value">{{ critical_count }}</div>
+    <div class="stat-label">Critical Priority</div>
+    <div class="stat-sub">{{ overdue_count }} SLA breached</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#dcfce7;color:#15803d;">
+      <i class="bi bi-check-circle"></i>
+    </div>
+    <div class="stat-value">{{ total_resolved_today }}</div>
+    <div class="stat-label">Resolved Today</div>
+    <div class="stat-sub">My queue: {{ my_queue_count }}</div>
+  </div>
+
+  {% if is_manager %}
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#f3e8ff;color:#7c3aed;">
+      <i class="bi bi-star"></i>
+    </div>
+    <div class="stat-value">{% if avg_csat %}{{ avg_csat }}/5{% else %}—{% endif %}</div>
+    <div class="stat-label">Avg CSAT Score</div>
+    <div class="stat-sub">SLA compliance: {{ sla_compliance }}%</div>
+  </div>
+  {% else %}
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#ffedd5;color:#c2410c;">
+      <i class="bi bi-clock-history"></i>
+    </div>
+    <div class="stat-value">{{ overdue_count }}</div>
+    <div class="stat-label">SLA Overdue</div>
+    <div class="stat-sub">Needs attention</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid-2-1">
+  <!-- Recent Tickets -->
+  <div class="card">
+    <div class="card-header">
+      <h5><i class="bi bi-clock-history" style="color:var(--teal);margin-right:6px;"></i>Recent Tickets</h5>
+      <a href="{% url 'tickets:list' %}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <div class="table-wrapper" style="border:none;border-radius:0;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Subject</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Assigned</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in recent_tickets %}
+          <tr>
+            <td>
+              <a href="{{ t.get_absolute_url }}" class="ticket-id">{{ t.ticket_id }}</a>
+            </td>
+            <td>
+              <a href="{{ t.get_absolute_url }}" style="color:var(--text);font-weight:500;">
+                {{ t.title|truncatechars:40 }}
+              </a>
+            </td>
+            <td>
+              <span class="d-flex align-items-center gap-2">
+                <span class="priority-dot dot-{{ t.priority }}"></span>
+                <span class="badge badge-{{ t.priority }}">{{ t.get_priority_display }}</span>
+              </span>
+            </td>
+            <td><span class="badge badge-{{ t.status }}">{{ t.get_status_display }}</span></td>
+            <td>
+              {% if t.assigned_to %}
+              <span class="d-flex align-items-center gap-2">
+                <span class="avatar avatar-sm avatar-teal">{{ t.assigned_to.get_initials }}</span>
+                {{ t.assigned_to.get_full_name|default:t.assigned_to.username|truncatechars:15 }}
+              </span>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ t.created_at|timesince }} ago</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">No tickets yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- Overdue tickets -->
+    {% if overdue_tickets %}
+    <div class="card" style="border-color:#fca5a5;">
+      <div class="card-header" style="background:#fff5f5;">
+        <h5 style="color:#dc2626;"><i class="bi bi-alarm" style="margin-right:6px;"></i>SLA Overdue</h5>
+      </div>
+      <div class="card-body" style="padding:12px;">
+        {% for t in overdue_tickets %}
+        <a href="{{ t.get_absolute_url }}" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);color:var(--text);">
+          <span class="ticket-id" style="flex-shrink:0;">{{ t.ticket_id }}</span>
+          <span style="flex:1;font-size:13px;font-weight:500;">{{ t.title|truncatechars:35 }}</span>
+          <span class="badge badge-{{ t.priority }}">{{ t.get_priority_display }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if is_manager %}
+    <!-- By Priority chart -->
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="bi bi-bar-chart" style="color:var(--teal);margin-right:6px;"></i>Open by Priority</h5>
+      </div>
+      <div class="card-body">
+        {% for level, count in by_priority.items %}
+        {% if count %}
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+            <span style="text-transform:capitalize;font-weight:500;">{{ level }}</span>
+            <span class="text-muted">{{ count }}</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-fill {% if level == 'critical' %}fill-red{% elif level == 'high' %}fill-orange{% elif level == 'medium' %}{% else %}fill-green{% endif %}"
+              style="width:{% widthratio count total_open 100 %}%"></div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Agent Performance -->
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="bi bi-people" style="color:var(--teal);margin-right:6px;"></i>Agent Overview</h5>
+        <a href="{% url 'accounts:agent_list' %}" class="btn btn-outline btn-sm">Manage</a>
+      </div>
+      <div class="card-body" style="padding:0;">
+        {% for stat in agent_stats %}
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);">
+          <div class="avatar avatar-sm avatar-teal">{{ stat.agent.get_initials }}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;">{{ stat.agent.get_full_name|default:stat.agent.username }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">{{ stat.agent.get_role_display }}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px;font-weight:600;">{{ stat.open }} open</div>
+            <div style="font-size:11px;color:var(--text-muted);">{{ stat.resolved_30d }} resolved</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state" style="padding:30px;"><p>No agents yet</p></div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% if is_manager and by_category %}
+<!-- Ticket by Category -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h5><i class="bi bi-tag" style="color:var(--teal);margin-right:6px;"></i>Open Tickets by Category</h5>
+  </div>
+  <div class="card-body">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      {% for cat in by_category %}
+      <div style="flex:1;min-width:120px;text-align:center;padding:16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);">
+        <div style="font-size:22px;font-weight:700;color:var(--navy);">{{ cat.ticket_count }}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">{{ cat.name }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

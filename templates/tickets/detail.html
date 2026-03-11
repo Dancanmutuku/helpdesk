@@ -1,0 +1,205 @@
+{% extends "base/base.html" %}
+{% block title %}Ticket {{ ticket.ticket_id }}{% endblock %}
+{% block page_title %}Ticket {{ ticket.ticket_id }}{% endblock %}
+
+{% block topbar_actions %}
+  {% if user.is_agent %}
+    <a href="{% url 'tickets:escalate' ticket.ticket_id %}" class="btn btn-warning btn-sm" data-confirm="Escalate this ticket to Critical priority?">
+      <i class="bi bi-exclamation-triangle"></i> Escalate
+    </a>
+  {% endif %}
+  <a href="{% url 'tickets:list' %}" class="btn btn-outline btn-sm">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+{% endblock %}
+
+{% block content %}
+<ul class="breadcrumb">
+  <li><a href="{% url 'tickets:list' %}">Tickets</a></li>
+  <li>{{ ticket.ticket_id }}</li>
+</ul>
+
+<div class="grid-2-1" style="gap:24px; align-items:start;">
+
+  <!-- LEFT: Ticket & Replies -->
+  <div>
+    <!-- Ticket Info Card -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-start flex-wrap">
+        <div>
+          <span class="ticket-id">{{ ticket.ticket_id }}</span>
+          <h4 class="mt-1">{{ ticket.title }}</h4>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge bg-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+          <span class="badge bg-{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="white-space:pre-wrap; line-height:1.6;">{{ ticket.description }}</div>
+        {% if attachments %}
+          <div class="mt-3 pt-2 border-top">
+            <div class="text-muted fw-bold mb-2 small">Attachments</div>
+            {% for att in attachments %}
+              <a href="{{ att.file.url }}" target="_blank" class="badge bg-light text-dark me-1 mb-1">
+                <i class="bi bi-paperclip"></i> {{ att.filename }}
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="card-footer d-flex gap-3 flex-wrap small text-muted">
+        <span><i class="bi bi-person"></i> Submitted by: {{ ticket.submitted_by.get_full_name|default:ticket.submitted_by.username }}</span>
+        <span><i class="bi bi-calendar"></i> Created: {{ ticket.created_at|date:"M d, Y H:i" }}</span>
+        {% if ticket.category %}<span><i class="bi bi-tag"></i> {{ ticket.category.name }}</span>{% endif %}
+        <span><i class="bi bi-lightning"></i> Source: {{ ticket.get_source_display }}</span>
+      </div>
+    </div>
+
+    <!-- Tabs: Replies / History / CSAT -->
+    <div class="tab-section">
+      <div class="tab-nav mb-3">
+        <button class="tab-link active" data-tab="replies">Replies <span class="badge bg-teal ms-1">{{ replies.count }}</span></button>
+        {% if user.is_agent %}<button class="tab-link" data-tab="history">History</button>{% endif %}
+        {% if ticket.csat_score %}<button class="tab-link" data-tab="csat">CSAT</button>{% endif %}
+      </div>
+
+      <!-- Replies Tab -->
+      <div class="tab-content active" id="tab-replies">
+        {% for reply in replies %}
+          <div class="reply-bubble {% if reply.is_internal %}is-internal{% elif reply.author.is_agent %}is-agent{% else %}is-user{% endif %}">
+            <div class="reply-meta d-flex align-items-center gap-2">
+              <span class="avatar avatar-sm {% if reply.author.is_agent %}avatar-teal{% endif %}">{{ reply.author.get_initials }}</span>
+              <strong>{{ reply.author.get_full_name|default:reply.author.username }}</strong>
+              <span class="text-muted small">{{ reply.author.get_role_display }}</span>
+              {% if reply.is_internal %}
+                <span class="badge bg-warning text-dark ms-2"><i class="bi bi-lock"></i> Internal</span>
+              {% endif %}
+              <span class="ms-auto small">{{ reply.created_at|date:"M d, Y H:i" }}</span>
+            </div>
+            <div style="white-space:pre-wrap; line-height:1.5;">{{ reply.body }}</div>
+            {% if reply.attachments.exists %}
+              <div class="mt-2 small text-muted">
+                {% for att in reply.attachments.all %}
+                  <a href="{{ att.file.url }}" target="_blank" class="badge bg-light text-dark me-1 mb-1">
+                    <i class="bi bi-paperclip"></i> {{ att.filename }}
+                  </a>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="text-center py-4 text-muted">No replies yet.</div>
+        {% endfor %}
+
+        {% if ticket.status != 'closed' %}
+          <div class="card mt-4 border-teal">
+            <div class="card-header bg-teal-pale text-teal"><h6 class="m-0"><i class="bi bi-reply"></i> Add Reply</h6></div>
+            <div class="card-body">
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reply">
+                {{ reply_form.body }}
+                {{ reply_form.body.errors }}
+
+                {% if user.is_agent %}
+                  <div class="form-check mb-2">
+                    {{ reply_form.is_internal }}
+                    <label for="{{ reply_form.is_internal.id_for_label }}" class="form-check-label">
+                      <i class="bi bi-lock text-warning"></i> Internal note
+                    </label>
+                  </div>
+                {% endif %}
+
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                  <label class="btn btn-outline btn-sm mb-1">
+                    <i class="bi bi-paperclip"></i> Attach
+                    {{ reply_form.attachments }}
+                  </label>
+                  <span id="attach-label" class="text-muted small"></span>
+                  <button type="submit" class="btn btn-primary ms-auto"><i class="bi bi-send"></i> Send</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if csat_form %}
+          <div class="card mt-4 border-warning bg-warning-pale">
+            <div class="card-body">
+              <h6><i class="bi bi-star text-warning"></i> Rate Support</h6>
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="csat">
+                {{ csat_form.csat_score }}
+                {{ csat_form.csat_comment }}
+                <button type="submit" class="btn btn-primary btn-sm mt-2">Submit</button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- History Tab -->
+      {% if user.is_agent %}
+        <div class="tab-content" id="tab-history">
+          {% for h in history %}
+            <div class="d-flex gap-2 py-2 border-bottom">
+              <div class="avatar avatar-sm">{{ h.changed_by.get_initials }}</div>
+              <div class="flex-fill">
+                <div class="small">
+                  <strong>{{ h.changed_by.get_full_name|default:h.changed_by.username }}</strong>
+                  changed <strong>{{ h.field_changed }}</strong> from <span class="badge bg-light text-muted">{{ h.old_value|default:"—" }}</span> to <span class="badge bg-teal text-white">{{ h.new_value }}</span>
+                </div>
+                <div class="text-muted small">{{ h.changed_at|date:"M d, Y H:i" }}</div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="text-center py-3 text-muted">No changes recorded.</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- CSAT Display -->
+      {% if ticket.csat_score %}
+        <div class="tab-content" id="tab-csat">
+          <div class="text-center py-4">
+            <div style="font-size:40px;">{{ ticket.csat_score }}/5 ⭐</div>
+            {% if ticket.csat_comment %}<p class="text-muted fst-italic">"{{ ticket.csat_comment }}"</p>{% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- RIGHT: Sidebar -->
+  <div class="d-flex flex-column gap-3">
+    {% include "tickets/_ticket_sidebar_cards.html" %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Reply attachments label
+const attachInput = document.querySelector('input[name="attachments"]');
+const attachLabel = document.getElementById('attach-label');
+if (attachInput) {
+    attachInput.addEventListener('change', () => {
+        attachLabel.textContent = Array.from(attachInput.files).map(f => f.name).join(', ');
+    });
+}
+
+// Tab switching
+document.querySelectorAll('.tab-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        document.querySelectorAll('.tab-link').forEach(tl => tl.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        btn.classList.add('active');
+    });
+});
+</script>
+{% endblock %}

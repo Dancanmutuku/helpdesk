@@ -1,0 +1,56 @@
+{% extends "base/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;">
+  <ul class="breadcrumb">
+    <li><a href="{% url 'knowledge:home' %}">Knowledge Base</a></li>
+    <li>{{ title }}</li>
+  </ul>
+
+  <div class="card">
+    <div class="card-header"><h5>{{ title }}</h5></div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="form-label">Title *</label>
+          <input type="text" name="title" class="form-control" value="{{ form.title.value|default:'' }}" required>
+        </div>
+        <div class="grid-2" style="gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Category *</label>
+            <select name="category" class="form-select" required>
+              <option value="">-- Select --</option>
+              {% for cat in form.category.field.queryset %}
+              <option value="{{ cat.pk }}" {% if form.category.value == cat.pk|stringformat:'s' %}selected{% endif %}>{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:24px;">
+            <input type="checkbox" name="is_published" id="is_published" class="form-check-input" style="width:16px;height:16px;"
+              {% if form.is_published.value %}checked{% endif %}>
+            <label for="is_published" style="font-size:13px;cursor:pointer;font-weight:500;">Published (visible to users)</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Summary</label>
+          <textarea name="summary" class="form-control" rows="2" placeholder="Brief summary shown in search results...">{{ form.summary.value|default:'' }}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Content *</label>
+          <textarea name="content" class="form-control" rows="16" required>{{ form.content.value|default:'' }}</textarea>
+          <div class="form-text">Supports plain text. Use blank lines to separate paragraphs.</div>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border);">
+          <a href="{% url 'knowledge:home' %}" class="btn btn-outline">Cancel</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Article
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

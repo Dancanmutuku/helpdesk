@@ -1,0 +1,101 @@
+{% extends "base/base.html" %}
+{% block title %}Knowledge Base{% endblock %}
+{% block page_title %}Knowledge Base{% endblock %}
+
+{% block topbar_actions %}
+{% if user.is_manager %}
+<a href="{% url 'knowledge:article_create' %}" class="btn btn-primary btn-sm">
+  <i class="bi bi-plus"></i> New Article
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Search -->
+<div style="max-width:600px;margin:0 auto 32px;">
+  <form method="get">
+    <div class="search-input-wrap">
+      <i class="bi bi-search" style="font-size:18px;"></i>
+      <input type="text" name="q" class="form-control" style="height:48px;font-size:15px;padding-left:48px;"
+        placeholder="Search articles, guides, FAQs..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <div style="text-align:center;margin-top:10px;font-size:13px;color:var(--text-muted);">
+      <a href="{% url 'knowledge:home' %}">Clear search</a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+{% if query %}
+<!-- Search results -->
+<div class="card">
+  <div class="card-header"><h5>Results for "{{ query }}" ({{ articles.count }})</h5></div>
+  <div class="card-body" style="padding:0;">
+    {% for article in articles %}
+    <a href="{{ article.get_absolute_url }}" style="display:block;padding:16px 20px;border-bottom:1px solid var(--border);color:var(--text);">
+      <div style="font-weight:600;font-size:14.5px;margin-bottom:4px;">{{ article.title }}</div>
+      <div style="font-size:12.5px;color:var(--text-muted);">{{ article.summary|truncatechars:120 }}</div>
+      <div style="font-size:11px;color:var(--slate-light);margin-top:4px;">
+        {{ article.category.name }} · {{ article.views }} views
+      </div>
+    </a>
+    {% empty %}
+    <div class="empty-state" style="padding:40px;">
+      <i class="bi bi-search"></i>
+      <h4>No articles found</h4>
+      <p>Try different keywords or <a href="{% url 'tickets:submit' %}">submit a support ticket</a>.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+
+<!-- Category grid -->
+<div class="grid-3 mb-6">
+  {% for cat in all_categories %}
+  <a href="?q={{ cat.name }}" class="card" style="padding:20px;text-align:center;border:1px solid var(--border);color:var(--text);transition:all var(--transition);" onmouseover="this.style.borderColor='var(--teal)';this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='var(--shadow)'">
+    <div style="width:48px;height:48px;background:var(--teal-pale);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;color:var(--teal);">
+      <i class="bi bi-{{ cat.icon }}"></i>
+    </div>
+    <div style="font-weight:600;font-size:14px;">{{ cat.name }}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">{{ cat.description|truncatechars:60 }}</div>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Popular articles -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="bi bi-fire" style="color:#f97316;margin-right:6px;"></i>Popular Articles</h5>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% for article in articles %}
+    <a href="{{ article.get_absolute_url }}" style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border);color:var(--text);">
+      <div style="width:40px;height:40px;background:var(--teal-pale);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--teal);">
+        <i class="bi bi-file-text"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:14px;">{{ article.title }}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+          {{ article.category.name }} · {{ article.views }} views
+          {% if article.helpfulness_score %} · {{ article.helpfulness_score }}% helpful{% endif %}
+        </div>
+      </div>
+      <i class="bi bi-chevron-right" style="color:var(--slate-light);flex-shrink:0;"></i>
+    </a>
+    {% empty %}
+    <div class="empty-state" style="padding:40px;">
+      <i class="bi bi-book"></i>
+      <h4>No articles yet</h4>
+      {% if user.is_manager %}<p><a href="{% url 'knowledge:article_create' %}">Create the first article</a></p>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

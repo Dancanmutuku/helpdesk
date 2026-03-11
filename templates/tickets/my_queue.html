@@ -1,0 +1,47 @@
+{% extends "base/base.html" %}
+{% block title %}My Queue{% endblock %}
+{% block page_title %}My Queue{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h5><i class="bi bi-inbox" style="color:var(--teal);margin-right:6px;"></i>Tickets Assigned to Me</h5>
+  </div>
+  <div class="table-wrapper" style="border:none;border-radius:0 0 var(--radius) var(--radius);">
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>Subject</th><th>Priority</th><th>Status</th><th>User</th><th>SLA</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td><a href="{{ t.get_absolute_url }}" class="ticket-id">{{ t.ticket_id }}</a></td>
+          <td><a href="{{ t.get_absolute_url }}" style="color:var(--text);font-weight:500;">{{ t.title|truncatechars:50 }}</a></td>
+          <td><span class="badge badge-{{ t.priority }}">{{ t.get_priority_display }}</span></td>
+          <td><span class="badge badge-{{ t.status }}">{{ t.get_status_display }}</span></td>
+          <td style="font-size:13px;">{{ t.submitted_by.get_full_name|default:t.submitted_by.username }}</td>
+          <td>
+            {% if t.sla_due_at %}
+              {% if t.is_overdue %}
+              <span class="sla-overdue" style="font-size:12px;"><i class="bi bi-alarm"></i> Overdue</span>
+              {% else %}
+              <span data-sla-due="{{ t.sla_due_at|date:'c' }}" style="font-size:12px;"></span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-muted" style="font-size:12.5px;">{{ t.created_at|date:"M d, Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">
+          <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h4>Your queue is clear!</h4>
+            <p>No tickets assigned to you right now.</p>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

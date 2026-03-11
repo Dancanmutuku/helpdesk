@@ -1,0 +1,105 @@
+{% extends "base/base.html" %}
+{% block title %}My Dashboard{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="grid-3 mb-6">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#e0f2fe;color:#0369a1;">
+      <i class="bi bi-ticket-perforated"></i>
+    </div>
+    <div class="stat-value">{{ open_count }}</div>
+    <div class="stat-label">Active Tickets</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#dcfce7;color:#15803d;">
+      <i class="bi bi-check-circle"></i>
+    </div>
+    <div class="stat-value">{{ resolved_count }}</div>
+    <div class="stat-label">Resolved</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);">
+    <div class="stat-icon" style="background:rgba(255,255,255,0.15);color:white;">
+      <i class="bi bi-plus-circle"></i>
+    </div>
+    <div class="stat-value" style="color:white;">New</div>
+    <div class="stat-label" style="color:rgba(255,255,255,0.7);">Submit a Ticket</div>
+    <a href="{% url 'tickets:submit' %}" class="btn" style="margin-top:12px;background:var(--teal);color:white;border-color:var(--teal);">
+      Open Ticket <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+</div>
+
+<div class="grid-2-1">
+  <!-- Recent tickets -->
+  <div class="card">
+    <div class="card-header">
+      <h5>My Recent Tickets</h5>
+      <a href="{% url 'tickets:list' %}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <div class="table-wrapper" style="border:none;border-radius:0;">
+      <table class="data-table">
+        <thead>
+          <tr><th>ID</th><th>Subject</th><th>Status</th><th>Updated</th></tr>
+        </thead>
+        <tbody>
+          {% for t in recent_tickets %}
+          <tr>
+            <td><a href="{{ t.get_absolute_url }}" class="ticket-id">{{ t.ticket_id }}</a></td>
+            <td><a href="{{ t.get_absolute_url }}" style="color:var(--text);font-weight:500;">{{ t.title|truncatechars:50 }}</a></td>
+            <td><span class="badge badge-{{ t.status }}">{{ t.get_status_display }}</span></td>
+            <td class="text-muted">{{ t.updated_at|timesince }} ago</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted);">
+            No tickets yet. <a href="{% url 'tickets:submit' %}">Submit your first ticket</a>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick links -->
+  <div class="card">
+    <div class="card-header"><h5>Quick Help</h5></div>
+    <div class="card-body">
+      <a href="{% url 'knowledge:home' %}" class="d-flex align-items-center gap-3"
+        style="padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;color:var(--text);">
+        <div style="width:40px;height:40px;background:var(--teal-pale);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:18px;">
+          <i class="bi bi-book"></i>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:13.5px;">Knowledge Base</div>
+          <div style="font-size:12px;color:var(--text-muted);">Browse FAQs and guides</div>
+        </div>
+        <i class="bi bi-chevron-right" style="margin-left:auto;color:var(--slate-light);"></i>
+      </a>
+      <a href="{% url 'tickets:submit' %}" class="d-flex align-items-center gap-3"
+        style="padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;color:var(--text);">
+        <div style="width:40px;height:40px;background:#e0f2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#0369a1;font-size:18px;">
+          <i class="bi bi-plus-circle"></i>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:13.5px;">New Support Ticket</div>
+          <div style="font-size:12px;color:var(--text-muted);">Get help from IT team</div>
+        </div>
+        <i class="bi bi-chevron-right" style="margin-left:auto;color:var(--slate-light);"></i>
+      </a>
+      <a href="{% url 'accounts:profile' %}" class="d-flex align-items-center gap-3"
+        style="padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);">
+        <div style="width:40px;height:40px;background:#f3e8ff;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#7c3aed;font-size:18px;">
+          <i class="bi bi-person-gear"></i>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:13.5px;">My Profile</div>
+          <div style="font-size:12px;color:var(--text-muted);">Update your settings</div>
+        </div>
+        <i class="bi bi-chevron-right" style="margin-left:auto;color:var(--slate-light);"></i>
+      </a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

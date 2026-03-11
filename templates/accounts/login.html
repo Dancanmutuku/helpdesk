@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — IT HelpDesk</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <!-- Left panel -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div class="auth-brand-icon"><i class="bi bi-headset"></i></div>
+      <h1 class="auth-headline">IT Support<br>Made Simple</h1>
+      <p class="auth-sub">Your centralized platform for IT support requests, knowledge, and team collaboration.</p>
+
+      <div class="auth-features">
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="bi bi-ticket-perforated"></i></div>
+          <div class="auth-feature-text">
+            <strong>Smart Ticket Management</strong>
+            Submit, track, and resolve issues with SLA tracking.
+          </div>
+        </div>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="bi bi-book"></i></div>
+          <div class="auth-feature-text">
+            <strong>Knowledge Base</strong>
+            Self-service articles and guided troubleshooting.
+          </div>
+        </div>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="bi bi-bar-chart-line"></i></div>
+          <div class="auth-feature-text">
+            <strong>Analytics & Reporting</strong>
+            Real-time dashboards and performance metrics.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-right">
+    <div class="auth-form-card">
+      <h2 class="auth-form-title">Welcome back</h2>
+      <p class="auth-form-sub">Sign in to your IT HelpDesk account</p>
+
+      {% if form.errors %}
+      <div class="alert alert-error">
+        <i class="bi bi-x-circle"></i> Invalid username or password. Please try again.
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+          <input type="text" name="username" id="{{ form.username.id_for_label }}"
+            class="form-control" placeholder="Enter your username" autocomplete="username"
+            value="{{ form.username.value|default:'' }}" autofocus>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+          <input type="password" name="password" id="{{ form.password.id_for_label }}"
+            class="form-control" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary w-100" style="justify-content:center;padding:11px;">
+          Sign In <i class="bi bi-arrow-right"></i>
+        </button>
+      </form>
+
+      <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-muted);">
+        Don't have an account?
+        <a href="{% url 'accounts:register' %}" style="font-weight:600;">Register here</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>
