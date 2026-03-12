@@ -1,3 +1,4 @@
+# tickets/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,14 +9,8 @@ from django.http import JsonResponse
 
 from .models import Ticket, TicketReply, TicketAttachment, TicketHistory, Category, CannedResponse
 from .forms import TicketSubmitForm, TicketReplyForm, TicketUpdateForm, TicketFilterForm, CSATForm
+from .utils import send_ticket_email
 from accounts.models import User
-from django.http import JsonResponse
-from .models import CannedResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from .models import Ticket
-
 
 
 def log_history(ticket, user, field, old_val, new_val):
@@ -74,6 +69,9 @@ def ticket_detail(request, ticket_id):
     if request.method == 'POST':
         action = request.POST.get('action')
 
+        # -----------------------------
+        # Reply action
+        # -----------------------------
         if action == 'reply':
             reply_form = TicketReplyForm(request.POST, user=request.user)
             if reply_form.is_valid():
@@ -96,9 +94,29 @@ def ticket_detail(request, ticket_id):
                     ticket.first_response_at = timezone.now()
                     ticket.save(update_fields=['first_response_at'])
 
+                # Notify ticket owner (end user) if someone else replied
+                if request.user != ticket.submitted_by:
+                    send_ticket_email(
+                        ticket.submitted_by,
+                        subject=f"Update on Ticket {ticket.ticket_id}",
+                        message=f"""
+Hello {ticket.submitted_by.get_full_name() or ticket.submitted_by.username},
+
+Your ticket "{ticket.title}" has received a new reply.
+
+View it here: {request.build_absolute_uri()}
+
+Regards,
+IT HelpDesk
+"""
+                    )
+
                 messages.success(request, 'Reply added.')
                 return redirect('tickets:detail', ticket_id=ticket_id)
 
+        # -----------------------------
+        # Update action (status, priority, assignment)
+        # -----------------------------
         elif action == 'update' and request.user.is_agent:
             update_form = TicketUpdateForm(request.POST, instance=ticket)
             if update_form.is_valid():
@@ -109,9 +127,58 @@ def ticket_detail(request, ticket_id):
                 log_history(ticket, request.user, 'status', old_status, updated.status)
                 log_history(ticket, request.user, 'priority', old_priority, updated.priority)
                 log_history(ticket, request.user, 'assigned_to', old_assigned, updated.assigned_to)
+
+                # Track changes to notify end user
+                changes = []
+                if old_status != updated.status:
+                    changes.append(f"Status changed from {old_status} to {updated.status}")
+                if old_priority != updated.priority:
+                    changes.append(f"Priority changed to {updated.priority}")
+                if old_assigned != updated.assigned_to:
+                    changes.append("Ticket has been assigned to an agent")
+
+                if changes:
+                    send_ticket_email(
+                        ticket.submitted_by,
+                        subject=f"Ticket {ticket.ticket_id} Updated",
+                        message=f"""
+Hello {ticket.submitted_by.get_full_name() or ticket.submitted_by.username},
+
+Your ticket "{ticket.title}" has been updated:
+
+{chr(10).join(changes)}
+
+View ticket: {request.build_absolute_uri()}
+
+Regards,
+IT HelpDesk
+"""
+                    )
+
+                # If ticket is closed, send separate notification
+                if updated.status == "closed":
+                    send_ticket_email(
+                        ticket.submitted_by,
+                        subject=f"Ticket {ticket.ticket_id} Closed",
+                        message=f"""
+Hello {ticket.submitted_by.get_full_name() or ticket.submitted_by.username},
+
+Your ticket "{ticket.title}" has been marked as CLOSED.
+
+If the issue persists, you may reopen or create a new ticket.
+
+View ticket: {request.build_absolute_uri()}
+
+Thank you for using IT HelpDesk.
+"""
+                    )
+
                 messages.success(request, 'Ticket updated.')
                 return redirect('tickets:detail', ticket_id=ticket_id)
 
+        # -----------------------------
+        # CSAT feedback
+        # -----------------------------
         elif action == 'csat':
             csat_form = CSATForm(request.POST, instance=ticket)
             if csat_form.is_valid():
@@ -129,30 +196,19 @@ def ticket_detail(request, ticket_id):
         'csat_form': csat_form,
         'canned_responses': CannedResponse.objects.filter(is_active=True) if request.user.is_agent else [],
     })
-# tickets/views.py
 
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q
-from .models import Ticket, Category
-from .forms import TicketFilterForm
 
+# -----------------------------
+# Ticket List View
+# -----------------------------
 @login_required
 def ticket_list(request):
-    """
-    Display tickets with filters and pagination.
-    Agents see all tickets; end-users see only their own.
-    """
-    # Base queryset
     if request.user.is_agent:
         qs = Ticket.objects.all().order_by('-created_at')
     else:
         qs = Ticket.objects.filter(submitted_by=request.user).order_by('-created_at')
 
-    # Initialize filter form with GET data
     filter_form = TicketFilterForm(request.GET or None)
-
     if filter_form.is_valid():
         search = filter_form.cleaned_data.get('search')
         status = filter_form.cleaned_data.get('status')
@@ -172,36 +228,33 @@ def ticket_list(request):
         if category:
             qs = qs.filter(category=category)
 
-    # Pagination
-    paginator = Paginator(qs, 10)  # 10 tickets per page
+    paginator = Paginator(qs, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    context = {
+    return render(request, 'tickets/list.html', {
         'tickets': page_obj,
         'filter_form': filter_form,
         'total_count': qs.count(),
-    }
-
-    return render(request, 'tickets/list.html', context)
+    })
 
 
+# -----------------------------
+# Canned Responses API
+# -----------------------------
 @login_required
 def canned_responses_api(request):
-    """
-    Return a JSON list of active canned responses for agents.
-    """
     if not request.user.is_agent:
         return JsonResponse({'error': 'Access denied'}, status=403)
-
     responses = CannedResponse.objects.filter(is_active=True).values('id', 'title', 'content')
     return JsonResponse(list(responses), safe=False)
 
+
+# -----------------------------
+# Escalate Ticket
+# -----------------------------
 @login_required
 def ticket_escalate(request, ticket_id):
-    """
-    Escalate a ticket to critical priority.
-    """
     ticket = get_object_or_404(Ticket, ticket_id=ticket_id)
 
     if not request.user.is_agent:
@@ -212,6 +265,21 @@ def ticket_escalate(request, ticket_id):
     ticket.priority = 'critical'
     ticket.save(update_fields=['priority'])
 
-    # Optional: log history here if you want
+    # Notify end user
+    send_ticket_email(
+        ticket.submitted_by,
+        subject=f"Ticket {ticket.ticket_id} Escalated",
+        message=f"""
+Hello {ticket.submitted_by.get_full_name() or ticket.submitted_by.username},
+
+Your ticket "{ticket.title}" has been escalated to CRITICAL priority.
+
+View ticket: {request.build_absolute_uri()}
+
+Regards,
+IT HelpDesk
+"""
+    )
+
     messages.success(request, f"Ticket {ticket.ticket_id} escalated from {old_priority} to Critical.")
     return redirect('tickets:detail', ticket_id=ticket_id)
