@@ -7,11 +7,11 @@ class Department(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         ordering = ['name']
+
+    def __str__(self):
+        return self.name
 
 
 class User(AbstractUser):
@@ -26,7 +26,9 @@ class User(AbstractUser):
     ]
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_END_USER)
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    department = models.ForeignKey(
+        Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='users'
+    )
     phone = models.CharField(max_length=20, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     job_title = models.CharField(max_length=100, blank=True)
@@ -50,12 +52,14 @@ class User(AbstractUser):
         return self.role == self.ROLE_MANAGER
 
     def get_avatar_url(self):
+        """Return avatar URL or a placeholder image with initials."""
         if self.avatar:
             return self.avatar.url
-        initials = (self.first_name[:1] + self.last_name[:1]).upper() or self.username[:2].upper()
-        return None
+        # Placeholder image using initials
+        return f"https://via.placeholder.com/50?text={self.get_initials()}"
 
     def get_initials(self):
+        """Return first letters of first and last name, or first 2 of username."""
         if self.first_name and self.last_name:
             return f"{self.first_name[0]}{self.last_name[0]}".upper()
         return self.username[:2].upper()
