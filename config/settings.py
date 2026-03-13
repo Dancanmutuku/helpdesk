@@ -1,32 +1,33 @@
 import os
+import dj_database_url
 from pathlib import Path
 
 # ============================================================
-# BASE SETTINGS
+# BASE
 # ============================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Secret key (Render ENV required)
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "dev-insecure-key-change-me"
-)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key-change-me")
 
-# DEBUG controlled by environment
 DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
 # ============================================================
-# HOSTS
+# HOSTS & CSRF
 # ============================================================
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
+    "helpdessk.onrender.com",
     ".onrender.com",
 ]
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://helpdessk.onrender.com",
+]
 
 # ============================================================
 # APPLICATIONS
@@ -38,10 +39,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
+    "whitenoise.runserver_nostatic",
     "widget_tweaks",
-
-    # Local apps
     "accounts",
     "tickets",
     "knowledge",
@@ -54,7 +53,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -88,12 +86,9 @@ TEMPLATES = [
 # ============================================================
 # DATABASE
 # ============================================================
-# Render auto-provides DATABASE_URL if PostgreSQL is attached
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
-    import dj_database_url
-
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
@@ -102,7 +97,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # Local development fallback
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -115,8 +109,8 @@ else:
 # ============================================================
 AUTH_USER_MODEL = "accounts.User"
 
-LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/dashboard/"
+LOGIN_URL           = "/accounts/login/"
+LOGIN_REDIRECT_URL  = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -127,66 +121,66 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ============================================================
-# INTERNATIONALIZATION
+# INTERNATIONALISATION
 # ============================================================
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-USE_TZ = True
+TIME_ZONE     = "UTC"
+USE_I18N      = True
+USE_TZ        = True
 
 # ============================================================
-# STATIC FILES (CRITICAL FOR RENDER)
+# STATIC FILES
 # ============================================================
-STATIC_URL = "/static/"
+STATIC_URL       = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT      = BASE_DIR / "staticfiles"
 
-STATICFILES_STORAGE = (
-    "whitenoise.storage.CompressedManifestStaticFilesStorage"
-)
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ============================================================
 # MEDIA FILES
 # ============================================================
-MEDIA_URL = "/media/"
+MEDIA_URL  = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # ============================================================
-# SECURITY (AUTO SWITCH BY DEBUG)
+# SECURITY (production only)
 # ============================================================
-CSRF_TRUSTED_ORIGINS = [
-    "https://helpdessk.onrender.com",
-]
-
 if not DEBUG:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE       = True
+    CSRF_COOKIE_SECURE          = True
+    SECURE_PROXY_SSL_HEADER     = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_BROWSER_XSS_FILTER   = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS             = "DENY"
 
 # ============================================================
-# EMAIL SETTINGS
-# Resend via SMTP
-EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST          = 'smtp.resend.com'
+# EMAIL  —  Resend via SMTP
+# ============================================================
+EMAIL_BACKEND       = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST          = "smtp.resend.com"
 EMAIL_PORT          = 465
 EMAIL_USE_SSL       = True
 EMAIL_USE_TLS       = False
-EMAIL_HOST_USER     = 'resend'
-EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', '')
-DEFAULT_FROM_EMAIL  = 'IT HelpDesk <onboarding@resend.dev>'
+EMAIL_HOST_USER     = "resend"
+EMAIL_HOST_PASSWORD = os.environ.get("RESEND_API_KEY", "")
+DEFAULT_FROM_EMAIL  = "IT HelpDesk <onboarding@resend.dev>"
+
+# Fallback to console backend locally if no API key set
+if not EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # ============================================================
 # SLA CONFIGURATION
 # ============================================================
 SLA_RESPONSE_TIMES = {
-    "low": 48,
-    "medium": 24,
-    "high": 8,
-    "critical": 2,
+    "low":      48,
+    "medium":   24,
+    "high":      8,
+    "critical":  2,
 }
 
 # ============================================================
-# DEFAULT FIELD
+# MISC
 # ============================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
