@@ -1,25 +1,34 @@
-# tickets/utils.py
 from django.core.mail import send_mail
 from django.conf import settings
 
 
 def send_ticket_email(user, subject, message):
     """
-    Send an email notification to a user regarding ticket updates.
-
-    Respects the user's email and optional `email_notifications` preference.
+    Safely send ticket notification email.
+    Prevents crashes if email is missing or invalid.
     """
-    if not user or not user.email:
+
+    # No user
+    if not user:
         return
 
-    # Optional: respect user preference for notifications
+    # No email or blank email
+    email = (user.email or "").strip()
+    if not email:
+        return
+
+    # Respect notification preference
     if hasattr(user, "email_notifications") and not user.email_notifications:
         return
 
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=True,  # avoid breaking the view if email fails
-    )
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        # Prevent breaking ticket workflow
+        print("Email sending failed:", e)
